@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "undelete-bot"
+version = "0.1.0"
+description = ""
+authors = ["Evan Pitstick <emp@seclab.in>"]
+readme = "README.md"
+packages = [{ include = "undelete_bot" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+certifi = "^2023.5.7"
+chardet = "^5.1.0"
+idna = "^3.4"
+praw = "^7.7.0"
+prawcore = "^2.3.0"
+requests = "^2.30.0"
+update-checker = "^0.18.0"
+urllib3 = "^2.0.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
