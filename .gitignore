@@ -3,3 +3,5 @@ __pycache__
 praw.ini
 .venv
 .idea/
+*.log
+*.log.?
