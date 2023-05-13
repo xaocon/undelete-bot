@@ -4,11 +4,12 @@ from time import sleep
 
 import praw
 import requests
+from praw.reddit import RedditAPIException
 
 logging.basicConfig(level=logging.INFO)
 
 nsfw_logger = logging.getLogger("nsfw")
-nsfw_handler = RotatingFileHandler("nsfw.low", maxBytes=2 ** 20, backupCount=1)
+nsfw_handler = RotatingFileHandler("nsfw.log", maxBytes=2 ** 20, backupCount=1)
 nsfw_handler.setLevel(logging.INFO)
 nsfw_logger.addHandler(nsfw_handler)
 
@@ -28,6 +29,7 @@ nsfw_but_not_porn = [
 
 # Links that we have already posted to /r/undelete
 posted_ids = []
+resume_list = []
 
 
 def get_top_ids():
@@ -48,8 +50,23 @@ def is_removed(thread_id, subreddit):
     return '<meta name="robots" content="noindex,nofollow' in response.text
 
 
+def submit_resume_list():
+    global resume_list
+    trial_list = resume_list.copy()
+    submitted = 0
+    try:
+        for title, url in trial_list:
+            reddit.subreddit(SUBREDDIT).submit(title=title, url=url)
+            resume_list.remove((title, url))
+            submitted += 1
+            if submitted > 10:
+                return
+    except RedditAPIException:
+        pass
+
+
 def check_removals():
-    global ids, ids_list
+    global ids, ids_list, resume_list
 
     new_ids_list = get_top_ids()
     new_ids = set(new_ids_list)
@@ -89,7 +106,15 @@ def check_removals():
                 title = title.format(post_title)
 
             # Post to /r/undelete
-            res = reddit.subreddit(SUBREDDIT).submit(title=title, url=url)
+            try:
+                reddit.subreddit(SUBREDDIT).submit(title=title, url=url)
+            except RedditAPIException as e:
+                for i in e.items:
+                    if i.error_type == "SUBREDDIT_NOTALLOWED":
+                        resume_list.append((title, url))
+                    else:
+                        logging.exception(i)
+                    continue
             logging.info(f'----DELETED AND POSTED!!!!!---- {url}')
         else:
             logging.info('--NOT DELETED: https://www.reddit.com{}'.format(submission.permalink))
@@ -99,5 +124,6 @@ def check_removals():
 
 
 while True:
-    sleep(60)
     check_removals()
+    submit_resume_list()
+    sleep(60)
